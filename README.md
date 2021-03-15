@@ -1,20 +1,28 @@
 Sign up for an AWS account.
 Start up an EMR cluster 
 Get the MovieLens data
+```
 wget http://files.grouplens.org/datasets/movielens/ml-1m.zip
 unzip ml-1m.zip
+```
 Convert ratings.dat, trade “::” for “,”, and take only the first three columns:
-
+```
 cat ml-1m/ratings.dat | sed 's/::/,/g' | cut -f1-3 -d, > ratings.csv
+```
 
 Put ratings file into HDFS:
-
+```
 hadoop fs -put ratings.csv /ratings.csv
+```
 Run the recommender job:
+```
 mahout recommenditembased --input /ratings.csv --output recommendations --numRecommendations 10 --outputPathForSimilarityMatrix similarity-matrix --similarityClassname SIMILARITY_COSINE
+```
 Look for the results in the part-files containing the recommendations:
+```
         hadoop fs -ls recommendations
         hadoop fs -cat recommendations/part-r-00000 | head
+ ```
 You should see a lookup file that looks something like this (your recommendations will be different since they are all 5.0-valued and we are only picking ten):
 
 User ID	(Movie ID : Recommendation Strength) Tuples
@@ -34,17 +42,22 @@ Building a Service
 Next, we’ll use this lookup file in a simple web service that returns movie recommendations for any given user.
 
 Get Twisted, and Klein and Redis modules for Python.
+```
         sudo pip3 install twisted
         sudo pip3 install klein
         sudo pip3 install redis
+ ``` 
 Install Redis and start up the server.
+```
         wget http://download.redis.io/releases/redis-2.8.7.tar.gz
         tar xzf redis-2.8.7.tar.gz
         cd redis-2.8.7
         make
         ./src/redis-server &
+```      
 Build a web service that pulls the recommendations into Redis and responds to queries.
 Put the following into a file, e.g., “hello.py”
+```
 from klein import run, route
 import redis
 import os
@@ -82,14 +95,18 @@ def recs(request, id):
 def home(request):
   return 'Please add a user id to the URL, e.g. http://localhost:8083/1234n'
 
-# Start up a listener on port 8080
+# Start up a listener on port 8083
 run("localhost", 8083)
-   
+```   
 
 Start the web service.
+```
 twistd -noy hello.py &
+```
 Test the web service with user id “35”:
+```
 curl localhost:8083/35
+```
 You should see a response like this (again, your recommendations will differ):
 The recommendations for user 35 are [7:5.0,2088:5.0,2080:5.0,1043:5.0,3107:5.0,2087:5.0,2078:5.0,3108:5.0,1042:5.0,1028:5.0]
 When you’re finished, don’t forget to shut down the cluster
